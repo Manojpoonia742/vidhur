@@ -1,74 +1,168 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import {
-    IoHomeOutline,
-    IoSearchOutline,
-    IoAddCircleOutline,
-    IoVideocamOutline,
-    IoPersonOutline,
-} from 'react-icons/io5';
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { Home, Search, PlusCircle, MessageCircle, VideoIcon, Bell } from "lucide-react";
+import { Pacifico } from "next/font/google";
+// import { io } from "socket.io-client"; // Uncomment if using socket.io
 
-function Navbar() {
-    return (
-        <nav
-            className={`
-                fixed
-                bottom-0 left-0 right-0
-                z-40
-                bg-white/95 dark:bg-gray-900
-                shadow-2xl
-                rounded-t-2xl
-                px-4 py-2
-                flex justify-between items-center
-                max-w-md mx-auto
-                transition-all duration-300
+const pacifico = Pacifico({ subsets: ["latin"], weight: "400" });
 
-                sm:top-auto sm:bottom-0 sm:left-1/2 sm:-translate-x-1/2 sm:rounded-2xl sm:px-8 sm:py-3
+export default function Navbar({ unreadMessages = 0 }) {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsCount, setNotificationsCount] = useState(0);
+  const profileRef = useRef(null);
 
-                md:top-0 md:bottom-0 md:left-0 md:right-auto md:translate-x-0 md:translate-y-0
-                md:flex-col md:justify-start md:items-center md:w-20 md:max-w-none md:rounded-none
-                md:h-screen md:py-8 md:px-1
-                lg:w-20 lg:px-2
-            `}
-        >
-            <Link
-                href="/"
-                className="flex flex-col items-center text-indigo-700 dark:text-indigo-400 hover:text-violet-600 dark:hover:text-violet-400 transition md:mb-8"
+  // Close profile dropdown if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch notifications count
+  useEffect(() => {
+    async function fetchNotifications() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const res = await fetch("/api/notifications/count", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setNotificationsCount(data.count || 0);
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+      }
+    }
+
+    fetchNotifications();
+  }, []);
+
+  // Optional: socket for real-time notifications
+  // useEffect(() => {
+  //   const token = localStorage.getItem("token");
+  //   if (!token) return;
+  //   const socket = io("/", { auth: { token } });
+  //   socket.on("new-notification", (data) => {
+  //     setNotificationsCount((prev) => prev + 1);
+  //   });
+  //   return () => socket.disconnect();
+  // }, []);
+
+  const navIconsDesktop = [
+    { href: "/", icon: Home },
+    { href: "/search", icon: Search },
+    { href: "/posts", icon: PlusCircle },
+    { href: "/videos", icon: VideoIcon },
+  ];
+
+  return (
+    <>
+      {/* Desktop Navbar */}
+      <nav className="hidden md:flex fixed top-0 left-0 w-full bg-white shadow-md z-50 px-6 lg:px-12 h-16 items-center justify-between">
+        {/* Left: Logo */}
+        <Link href="/">
+          <span className={`text-2xl ${pacifico.className} text-indigo-700 font-bold`}>Vidhur</span>
+        </Link>
+
+        {/* Center: Navigation Icons */}
+        <div className="flex items-center gap-8">
+          {navIconsDesktop.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href}>
+                <Icon size={20} className="text-gray-700 hover:text-indigo-600 transition" />
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Right: Notifications, Messages, Profile */}
+        <div className="flex items-center gap-4">
+          {/* Notifications */}
+          <div className="relative">
+            <Bell size={24} className="text-gray-700 cursor-pointer" />
+            {notificationsCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+                {notificationsCount}
+              </span>
+            )}
+          </div>
+
+          {/* Messages */}
+          <Link href="/messages" className="relative">
+            <MessageCircle size={20} className="text-gray-700 hover:text-indigo-600 transition" />
+            {unreadMessages > 0 && (
+              <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs font-semibold rounded-full px-1.5 py-0.5">
+                {unreadMessages}
+              </span>
+            )}
+          </Link>
+
+          {/* Profile */}
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen(!profileOpen)}
+              className="w-10 h-10 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 text-lg font-bold hover:ring-2 hover:ring-indigo-300 transition"
             >
-                <IoHomeOutline className="text-2xl sm:text-3xl" />
-                <span className="text-xs sm:text-sm mt-1 md:hidden lg:block">Home</span>
-            </Link>
-            <Link
-                href="/search"
-                className="flex flex-col items-center text-indigo-700 dark:text-indigo-400 hover:text-violet-600 dark:hover:text-violet-400 transition md:mb-8"
-            >
-                <IoSearchOutline className="text-2xl sm:text-3xl" />
-                <span className="text-xs sm:text-sm mt-1 md:hidden lg:block">Search</span>
-            </Link>
-            <Link
-                href="/post"
-                className="flex flex-col items-center text-indigo-700 dark:text-indigo-400 hover:text-violet-600 dark:hover:text-violet-400 transition md:mb-8"
-            >
-                <IoAddCircleOutline className="text-3xl sm:text-4xl" />
-                <span className="text-xs sm:text-sm mt-1 md:hidden lg:block">Post</span>
-            </Link>
-            <Link
-                href="/videos"
-                className="flex flex-col items-center text-indigo-700 dark:text-indigo-400 hover:text-violet-600 dark:hover:text-violet-400 transition md:mb-8"
-            >
-                <IoVideocamOutline className="text-2xl sm:text-3xl" />
-                <span className="text-xs sm:text-sm mt-1 md:hidden lg:block">Videos</span>
-            </Link>
-            <Link
-                href="/profile"
-                className="flex flex-col items-center text-indigo-700 dark:text-indigo-400 hover:text-violet-600 dark:hover:text-violet-400 transition"
-            >
-                <IoPersonOutline className="text-2xl sm:text-3xl" />
-                <span className="text-xs sm:text-sm mt-1 md:hidden lg:block">Profile</span>
-            </Link>
-        </nav>
-    );
+              U
+            </button>
+
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border text-gray-600 border-gray-200 rounded-lg shadow-lg flex flex-col py-2">
+                <Link href="/account">
+                  <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer">Profile</div>
+                </Link>
+                <Link href="/settings">
+                  <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer">Settings</div>
+                </Link>
+                <Link href="/logout">
+                  <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600">Logout</div>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* Mobile Navbar */}
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white shadow-md z-50 px-4 py-2 flex items-center justify-evenly">
+        <Link href="/"><Home size={30} className="text-gray-700 hover:text-indigo-600 transition" /></Link>
+        <Link href="/search"><Search size={30} className="text-gray-700 hover:text-indigo-600 transition" /></Link>
+        <Link href="/messages" className="relative">
+          <MessageCircle size={30} className="text-gray-700 hover:text-indigo-600 transition" />
+          {unreadMessages > 0 && (
+            <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs font-semibold rounded-full px-1.5 py-0.5">
+              {unreadMessages}
+            </span>
+          )}
+        </Link>
+
+        <div className="relative" ref={profileRef}>
+          <button
+            onClick={() => setProfileOpen(!profileOpen)}
+            className="w-10 h-10 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 text-lg font-bold hover:ring-2 hover:ring-indigo-300 transition"
+          >
+            U
+          </button>
+
+          {profileOpen && (
+            <div className="absolute bottom-14 right-0 w-48 bg-white border text-gray-600 border-gray-200 rounded-lg shadow-lg flex flex-col py-2">
+              <Link href="/account"><div className="px-4 py-2 hover:bg-gray-100 cursor-pointer">Profile</div></Link>
+              <Link href="/videos"><div className="px-4 py-2 hover:bg-gray-100 cursor-pointer">Videos</div></Link>
+              <Link href="/upload"><div className="px-4 py-2 hover:bg-gray-100 cursor-pointer">Upload</div></Link>
+              <Link href="/settings"><div className="px-4 py-2 hover:bg-gray-100 cursor-pointer">Settings</div></Link>
+              <Link href="/logout"><div className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600">Logout</div></Link>
+            </div>
+          )}
+        </div>
+      </nav>
+    </>
+  );
 }
-
-export default Navbar;
